@@ -1,10 +1,14 @@
 {
     "compilerOptions": {
-        "outDir": "lib",
-        "rootDir": "src",
-        "target": "ES2017",
-        "moduleResolution": "nodenext",
-        "module": "NodeNext",
-        "esModuleInterop": true
-    },
-}
+      "skipLibCheck": true,
+      "target": "ES6",
+      "module": "CommonJS",
+      "isolatedModules": true,
+      "esModuleInterop": true,
+      "rootDir": "./src",
+      "outDir": "./lib",
+      "lib": [ "esnext" ],
+      "types": [ "node" ],
+      "baseUrl": "./",
+    }
+  }
