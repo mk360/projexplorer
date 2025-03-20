@@ -322,7 +322,8 @@ if (fs.existsSync(packageJsonPath)) {
 
 	});*/
 
-	console.dir(util.inspect(graph.root, false, null, true));
+	// console.dir(util.inspect(graph.root, false, null, true));
+	console.log(graph.flattenGraph());
 	// console.log(graph.root.imports);
 } else {
 	console.error("No package.json found in the current directory.");
