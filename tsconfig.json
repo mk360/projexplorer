@@ -3,7 +3,7 @@
       "skipLibCheck": true,
       "target": "ES6",
       "module": "CommonJS",
-      "isolatedModules": true,
+      "isolatedModules": false,
       "esModuleInterop": true,
       "rootDir": "./src",
       "outDir": "./lib",

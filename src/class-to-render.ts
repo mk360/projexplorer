@@ -1,6 +1,17 @@
-interface ClassToRender {
+interface Symbol {
     name: string;
-    imports: ClassToRender[];
+    alias?: string;
 }
 
-export default ClassToRender;
+interface ClassToRender {
+    name: string;
+    rank: number;
+    imports: Import[];
+}
+
+interface Import {
+    src: ClassToRender;
+    symbols: Symbol[];
+}
+
+export {ClassToRender, Import};
