@@ -39,10 +39,7 @@ class DependanceGraph {
 		// console.log(flatGraph);
 		let ctr: ClassToRender;
 
-		if (ctr = flatGraph.find((node) => {
-			if (name === "S:\\Projets-Études\\Programmes\\timeline\\src\\interfaces\\chronon")
-				console.log(node.name)
-			return name === node.name}))
+		if (ctr = flatGraph.find((node) =>  name === node.name))
 			return ctr;
 		else
 			return undefined
@@ -53,85 +50,146 @@ class DependanceGraph {
 		// console.log(currentRoot);
 		const sourceFile = ts.createSourceFile(filename, fs.readFileSync(filename, "utf-8"), ts.ScriptTarget.Latest);
 
-		sourceFile.statements.filter((statement) => statement.kind == SyntaxKind.ImportDeclaration).forEach((importDeclaration) => {
-			if (importDeclaration.getChildren(sourceFile).filter((impDecChildNodes) => ts.isImportClause(impDecChildNodes)).length === 0)
-				return;
+		let importDeclarations = sourceFile.statements.filter((statement) => ts.isImportDeclaration(statement))
+		if (importDeclarations.length === 0)
+			return;
 
-			let srcName = importDeclaration.getChildren(sourceFile).find((child) => ts.isStringLiteral(child)).text;
-			// console.log(srcName);
+		for (let importDeclaration of importDeclarations) {
+			let importClauses = importDeclaration.getChildren(sourceFile).filter((child) => ts.isImportClause(child))
 
-			let isNodeModule = false;
-			if (!srcName.startsWith('./') && !srcName.startsWith('../'))
-				isNodeModule = true;
+			if (importClauses.length === 0)
+				continue;
 
-			srcName = path.resolve(path.parse(filename).dir, srcName);
-			let src: ClassToRender;
-			let _import: Import = {
+			let newImport: Import = {
 				src: undefined,
 				symbols: []
 			};
+			currentRoot.imports.push(newImport);
 
-			currentRoot.imports.push(_import);
+			let importSource = importDeclaration.getChildren(sourceFile).find((child) => ts.isStringLiteral(child)).text;
+			let isNodeModule = !importSource.startsWith('./') && !importSource.startsWith('../')
 
-			console.log(currentRoot);
-			console.log("Looking for :", srcName)
-			if (src = this.getClassToRender(srcName)) {
-				console.log(srcName, "already there")
-				_import.src = src;
-				_import.src.rank = Math.max(_import.src.rank, currentRoot.rank+1);
-				// console.log("module " + srcName + " already there")
-				// console.log(_import.src);
-				console.log(currentRoot,'\n');
-			} else {
-				console.log("Not found, adding", srcName)
-				_import.src = {
-					name: srcName,
-					rank: currentRoot.rank+1,
-					imports: []
-				}
+			if (!isNodeModule) {
+				let importSourceFile = path.resolve(path.parse(filename).dir, importSource);
+				let src: ClassToRender;
 
-				let newFile: string = "";
-				newFile = path.resolve(path.parse(filename).dir, srcName) + ".ts";
-				// console.log(newFile);
-				// console.log(srcName);
-
-				// console.log("from : " + filename);
-				// console.log("to : " + newFile);
-				//Recursive call here
-
-				// console.log(isNodeModule);
-
-				console.log(currentRoot,'\n');
-				if (!isNodeModule)
-					this.recurse(_import.src, srcName + ".ts");
-			}
-			
-			importDeclaration.getChildren(sourceFile).filter((impDecChildNodes) => ts.isImportClause(impDecChildNodes)).forEach((importClause) => {
-				let impClauseChildNodes = importClause.getChildren(sourceFile);
-				let childRoot;
-
-				if (childRoot = impClauseChildNodes.find((node) => ts.isNamedImports(node))) {
-					childRoot.getChildren(sourceFile).filter((child) => ts.isImportSpecifier(child)).forEach((importSpecifier) => {
-						_import.symbols.push({name: importSpecifier.getChildren(sourceFile).find((id) => ts.isIdentifier(id)).getText()});
-					});
-
-				} else if (childRoot = impClauseChildNodes.find((node) => ts.isNamespaceImport(node))) {
-					_import.symbols.push({
-						name: "*",
-						alias: childRoot.getChildren(sourceFile).find((child) => ts.isIdentifier(child)).getText()
-					});
-
+				if (src = this.getClassToRender(importSourceFile)) {
+					newImport.src = src;
+					newImport.src.rank = Math.max(newImport.src.rank, currentRoot.rank+1);
 				} else {
-					// console.log(impClauseChildNodes.find((child) => ts.isIdentifier(child)).text);
-					_import.symbols.push({
-						name: impClauseChildNodes.find((child) => ts.isIdentifier(child)).text
-					});
+					newImport.src = {
+						name: importSourceFile,
+						rank: currentRoot.rank+1,
+						imports: []
+					}
 
+					this.recurse(newImport.src, importSourceFile+'.ts');
 				}
 
-			});
+			}
 
-		});
+			for (let importClause of importClauses) {
+				importClause.getChildren(sourceFile).forEach((child) => {
+					if (ts.isNamedImports(child)) {
+						let importSpecifiers = child.getChildren(sourceFile).filter((childschild) => ts.isImportSpecifier(childschild));
+
+						for (let importSpecifier of importSpecifiers) {
+							let identifier = importSpecifier.getChildren(sourceFile).find((child) => ts.isIdentifier(child));
+							newImport.symbols.push({name: identifier.getText()});
+						}
+
+					} else if (ts.isNamespaceImport(child)) {
+						let identifier = child.getChildren(sourceFile).find((childschild) => ts.isIdentifier(childschild));
+						newImport.symbols.push({name: "*", alias: identifier.getText()});
+
+					} else if (ts.isIdentifier(child)) {
+						newImport.symbols.push({name: child.text});
+					}
+
+				});
+
+			}
+
+		}
+
+
+		// sourceFile.statements.filter((statement) => ts.isImportDeclaration(statement)/*statement.kind == SyntaxKind.ImportDeclaration*/).forEach((importDeclaration) => {
+		// 	if (importDeclaration.getChildren(sourceFile).filter((impDecChildNodes) => ts.isImportClause(impDecChildNodes)).length === 0)
+		// 		return;
+
+		// 	let srcName = importDeclaration.getChildren(sourceFile).find((child) => ts.isStringLiteral(child)).text;
+		// 	// console.log(srcName);
+
+		// 	let isNodeModule = srcName.startsWith("./") || srcName.startsWith('../');
+
+		// 	srcName = path.resolve(path.parse(filename).dir, srcName);
+		// 	let src: ClassToRender;
+		// 	let _import: Import = {
+		// 		src: undefined,
+		// 		symbols: []
+		// 	};
+
+		// 	currentRoot.imports.push(_import);
+
+		// 	console.log(currentRoot);
+		// 	console.log("Looking for :", srcName)
+		// 	if (src = this.getClassToRender(srcName)) {
+		// 		console.log(srcName, "already there")
+		// 		_import.src = src;
+		// 		_import.src.rank = Math.max(_import.src.rank, currentRoot.rank+1);
+		// 		// console.log("module " + srcName + " already there")
+		// 		// console.log(_import.src);
+		// 		console.log(currentRoot,'\n');
+		// 	} else {
+		// 		console.log("Not found, adding", srcName)
+		// 		_import.src = {
+		// 			name: srcName,
+		// 			rank: currentRoot.rank+1,
+		// 			imports: []
+		// 		}
+
+		// 		let newFile: string = "";
+		// 		newFile = path.resolve(path.parse(filename).dir, srcName) + ".ts";
+		// 		// console.log(newFile);
+		// 		// console.log(srcName);
+
+		// 		// console.log("from : " + filename);
+		// 		// console.log("to : " + newFile);
+		// 		//Recursive call here
+
+		// 		// console.log(isNodeModule);
+
+		// 		console.log(currentRoot,'\n');
+		// 		if (!isNodeModule)
+		// 			this.recurse(_import.src, srcName + ".ts");
+		// 	}
+			
+		// 	importDeclaration.getChildren(sourceFile).filter((impDecChildNodes) => ts.isImportClause(impDecChildNodes)).forEach((importClause) => {
+		// 		let impClauseChildNodes = importClause.getChildren(sourceFile);
+		// 		let childRoot;
+
+		// 		if (childRoot = impClauseChildNodes.find((node) => ts.isNamedImports(node))) {
+		// 			childRoot.getChildren(sourceFile).filter((child) => ts.isImportSpecifier(child)).forEach((importSpecifier) => {
+		// 				_import.symbols.push({name: importSpecifier.getChildren(sourceFile).find((id) => ts.isIdentifier(id)).getText()});
+		// 			});
+
+		// 		} else if (childRoot = impClauseChildNodes.find((node) => ts.isNamespaceImport(node))) {
+		// 			_import.symbols.push({
+		// 				name: "*",
+		// 				alias: childRoot.getChildren(sourceFile).find((child) => ts.isIdentifier(child)).getText()
+		// 			});
+
+		// 		} else {
+		// 			// console.log(impClauseChildNodes.find((child) => ts.isIdentifier(child)).text);
+		// 			_import.symbols.push({
+		// 				name: impClauseChildNodes.find((child) => ts.isIdentifier(child)).text
+		// 			});
+
+		// 		}
+
+		// 	});
+
+		// });
 
 	}
 
@@ -264,7 +322,7 @@ if (fs.existsSync(packageJsonPath)) {
 
 	});*/
 
-	// console.dir(util.inspect(graph.root, false, null, true));
+	console.dir(util.inspect(graph.root, false, null, true));
 	// console.log(graph.root.imports);
 } else {
 	console.error("No package.json found in the current directory.");
