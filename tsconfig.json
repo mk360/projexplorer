@@ -10,5 +10,6 @@
       "lib": [ "esnext" ],
       "types": [ "node" ],
       "baseUrl": "./",
+      "sourceMap": true,
     }
   }

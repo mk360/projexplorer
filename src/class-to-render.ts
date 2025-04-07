@@ -1,4 +1,4 @@
-interface Symbol {
+interface ImportSymbol {
     name: string;
     alias?: string;
 }
@@ -11,7 +11,8 @@ interface ClassToRender {
 
 interface Import {
     src: ClassToRender;
-    symbols: Symbol[];
+    symbols: ImportSymbol[];
 }
 
-export {ClassToRender, Import};
+export { ClassToRender, Import, ImportSymbol };
+

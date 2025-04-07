@@ -1,22 +1,12 @@
-import fs from "fs";
-import ClassToRender from "./class-to-render";
-
-function collectLines(root: ClassToRender) {
-    let lines: string[] = [];
-    if (root.imports.length) {
-        const mappedImports = root.imports.map((i) => collectLines(i).flat()).flat();
-        lines = lines.concat(mappedImports);
-    }
-    lines = lines.concat(root.imports.map((imported) => `${imported.name.trim()} --> ${root.name.trim()}`));
-    return lines;
-};
+import { ClassToRender } from "./class-to-render";
+import collectLines from "./collect-lines";
+import * as fs from "fs";
 
 function renderGraph(graph: ClassToRender) {
     const lines: string[] = collectLines(graph);
-    return lines.join("\n");
-};
+    console.log(lines);
 
-const htmlFile = `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
     <head>
@@ -32,13 +22,16 @@ const htmlFile = `
     <body>
         <pre class="mermaid">
 graph
-${renderGraph({ name: "Base", imports: [{ name: "Samir", imports: [{ name: "Daddy", imports: [] }, { name: "Mommy", imports: [] }] }, { name: "Tasnim", imports: [] }] })}
+${lines.join("\n")}
         </pre>
         <script type="module">
             import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({ startOnLoad: true });
+            mermaid.initialize({ startOnLoad: true, theme: "forest" });
         </script>
     </body>
 </html>`;
 
-fs.writeFileSync("test.html", htmlFile);
+    return htmlContent;
+};
+
+export default renderGraph;
